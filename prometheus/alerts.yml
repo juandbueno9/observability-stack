@@ -1,0 +1,51 @@
+groups:
+  - name: servidores
+    rules:
+      - alert: InstanciaCaida
+        expr: up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.instance }} no responde"
+          description: "El job {{ $labels.job }} lleva más de 2 minutos sin respuesta."
+
+      - alert: CPUAlta
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "CPU alta en {{ $labels.instance }}"
+          description: "Uso de CPU sobre 85% por 10 minutos (actual: {{ $value | printf \"%.0f\" }}%)."
+
+      - alert: MemoriaAlta
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Memoria alta en {{ $labels.instance }}"
+          description: "Uso de memoria sobre 90% (actual: {{ $value | printf \"%.0f\" }}%)."
+
+      - alert: DiscoCasiLleno
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 10
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Disco casi lleno en {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Queda {{ $value | printf \"%.1f\" }}% libre."
+
+  - name: sitios
+    rules:
+      - alert: SitioCaido
+        expr: probe_success == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.instance }} no responde"
+
+      - alert: CertificadoPorVencer
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 15
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "El certificado SSL de {{ $labels.instance }} vence pronto"
+          description: "Vence en {{ $value | printf \"%.0f\" }} días."
