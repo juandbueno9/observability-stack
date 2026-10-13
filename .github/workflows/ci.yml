@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validar configuración
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose config
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+      - name: Prometheus (promtool)
+        run: |
+          docker run --rm -v "$PWD/prometheus:/etc/prometheus" --entrypoint promtool \
+            prom/prometheus:v2.53.0 check config /etc/prometheus/prometheus.yml
+      - name: Alertmanager (amtool)
+        run: |
+          docker run --rm -v "$PWD/alertmanager:/etc/alertmanager" --entrypoint amtool \
+            prom/alertmanager:v0.27.0 check-config /etc/alertmanager/alertmanager.yml
+
+  smoke:
+    name: Prueba de arranque
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar el stack
+        run: |
+          cp .env.example .env
+          docker compose up -d
+          sleep 25
+          docker compose ps
+      - name: Verificar servicios
+        run: |
+          curl -fsS http://127.0.0.1:9090/-/ready
+          curl -fsS http://127.0.0.1:9093/-/ready
+          curl -fsS http://127.0.0.1:3000/api/health
+          curl -fsS 'http://127.0.0.1:9090/api/v1/query?query=up' | grep -q '"status":"success"'
+      - name: Logs si falla
+        if: failure()
+        run: docker compose logs --tail=50
+      - run: docker compose down -v
+        if: always()

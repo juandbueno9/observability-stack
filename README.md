@@ -2,6 +2,7 @@
 
 Stack de monitoreo listo para usar con Docker Compose: **métricas, logs, alertas y disponibilidad de sitios web**, con la misma arquitectura que uso en producción para monitorear servidores Linux en AWS.
 
+[![CI](https://github.com/juandbueno9/observability-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/juandbueno9/observability-stack/actions/workflows/ci.yml)
 ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white)
 ![Loki](https://img.shields.io/badge/Loki-F46800?logo=grafana&logoColor=white)
@@ -90,5 +91,16 @@ docker run --rm -v $PWD/prometheus:/etc/prometheus --entrypoint promtool \
 - [ ] Alertas de Alertmanager hacia Telegram o Slack
 - [ ] Despliegue en AWS con Terraform
 
+## Integración continua
+
+Cada `push` ejecuta en GitHub Actions:
+
+| Paso | Herramienta |
+|---|---|
+| Sintaxis del compose | `docker compose config` |
+| Configuración y reglas de Prometheus | `promtool check config` |
+| Configuración de Alertmanager | `amtool check-config` |
+| **Prueba de arranque**: levanta el stack y verifica `/-/ready` de Prometheus y Alertmanager, `/api/health` de Grafana y una consulta PromQL | `docker compose up` + `curl` |
+
 ## Licencia
-MIT
+[MIT](LICENSE)
